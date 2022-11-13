@@ -1,0 +1,49 @@
+name: 'Setup LaTeX action'
+author: 'Mr. Kin'
+description: 'Setup LaTeX environment for doc class'
+inputs:
+  lanzou_cookie_id:
+    required: true
+  lanzou_cookie_value:
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Setup TeX Live
+      uses: teatimeguest/setup-texlive-action@v2
+      with:
+        package-file: ${{ github.action_path }}/tex_live_packages
+
+    - name: Download latex fonts version file
+      run: |
+        wget https://raw.githubusercontent.com/Mister-Kin/actions/main/setup-latex-action/latex_fonts_version
+      shell: bash
+
+    - name: Cache LaTeXFonts
+      id: cache-latexfonts
+      uses: actions/cache@v3
+      with:
+        path: ./LaTeXFonts
+        key: cache-latexfonts-${{ hashFiles('./latex_fonts_version') }}
+
+    - name: Delete latex fonts version file
+      run: |
+        rm latex_fonts_version
+      shell: bash
+
+    - if: ${{ steps.cache-latexfonts.outputs.cache-hit != 'true' }}
+      name: Download LaTeX Fonts
+      uses: Mister-Kin/actions/lanzou-cloud-action@main
+      with:
+        lanzou_cookie_id: ${{ inputs.lanzou_cookie_id }}
+        lanzou_cookie_value: ${{ inputs.lanzou_cookie_value }}
+        lanzou_is_file: false
+        lanzou_is_download: true
+        lanzou_target_id: 5933154
+        lanzou_target_path: ./
+
+    - name: Install and refresh LaTeXFonts
+      run: |
+        cp -a ./LaTeXFonts /usr/share/fonts/
+        fc-cache -f -v -r
+      shell: bash

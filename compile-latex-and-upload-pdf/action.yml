@@ -1,0 +1,51 @@
+name: "Compile LaTeX and upload PDF"
+author: "Mr. Kin"
+description: "Compile LaTeX and upload PDF to lanzou cloud"
+inputs:
+  lanzou_cookie_id:
+    required: true
+  lanzou_cookie_value:
+    required: true
+  lanzou_target_id:
+    required: true
+  latex_project_dir:
+    required: true
+  cls_file_is_in_project_dir:
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Process project name
+      id: process-project-name
+      env:
+        latex_project_dir: ${{ inputs.latex_project_dir }}
+      run: |
+        project_name=${latex_project_dir##*/}
+        echo "project_name=${project_name}" >> $GITHUB_OUTPUT
+        echo "upload_target_path=./${latex_project_dir}/${project_name}.pdf" >> $GITHUB_OUTPUT
+      shell: bash
+
+    - name: Compile LaTeX
+      env:
+        latex_project_dir: ${{ inputs.latex_project_dir }}
+        project_name: ${{ steps.process-project-name.outputs.project_name }}
+      run: |
+        echo ${{ steps.process-project-name.outputs.upload_target_path }}
+        if [ ${{ inputs.cls_file_is_in_project_dir }} = 'true' ]; then sed -i "s/STIX Two Math/STIXTwoMath-Regular.otf/" ./${latex_project_dir}/resources/doc.cls; else sed -i "s/STIX Two Math/STIXTwoMath-Regular.otf/" ./public_resources/doc.cls; fi
+        cd ./${latex_project_dir}
+        xelatex -interaction=batchmode ${project_name}.tex
+        biber ${project_name}
+        xelatex -interaction=batchmode ${project_name}.tex
+        xelatex -interaction=batchmode ${project_name}.tex
+        cd ~-
+      shell: bash
+
+    - name: Upload PDF
+      uses: Mister-Kin/actions/lanzou-cloud-action@main
+      with:
+        lanzou_cookie_id: ${{ inputs.lanzou_cookie_id }}
+        lanzou_cookie_value: ${{ inputs.lanzou_cookie_value }}
+        lanzou_is_file: true
+        lanzou_is_download: false
+        lanzou_target_id: ${{ inputs.lanzou_target_id }}
+        lanzou_target_path: ${{ steps.process-project-name.outputs.upload_target_path }}

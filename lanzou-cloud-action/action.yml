@@ -1,0 +1,46 @@
+name: 'Lanzou cloud action'
+author: 'Mr. Kin'
+description: 'Download and upload files from lanzou cloud'
+inputs:
+  lanzou_cookie_id:
+    required: true
+  lanzou_cookie_value:
+    required: true
+  lanzou_is_file:
+    required: true
+  lanzou_is_download:
+    required: true
+  lanzou_target_id:
+    required: true
+  lanzou_target_path:
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Setup python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3'
+        # cache: 'pip' # caching pip dependencies （复合action中cache功能无效，因为无法找到requirements.txt，需使用cache action手动保存缓存）
+
+    - name: Cache pip packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip
+
+    - name: Install lanzou-api
+      run: pip install lanzou-api
+      shell: bash
+
+    - name: Download and upload files from lanzou cloud
+      env:
+        lanzou_cookie_id: ${{ inputs.lanzou_cookie_id }}
+        lanzou_cookie_value: ${{ inputs.lanzou_cookie_value }}
+        lanzou_is_file: ${{ inputs.lanzou_is_file }}
+        lanzou_is_download: ${{ inputs.lanzou_is_download }}
+        lanzou_target_id: ${{ inputs.lanzou_target_id }}
+        lanzou_target_path: ${{ inputs.lanzou_target_path }}
+      run: |
+        python ${{ github.action_path }}/lanzou_cloud.py
+      shell: bash
