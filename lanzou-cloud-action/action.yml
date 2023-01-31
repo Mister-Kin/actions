@@ -30,7 +30,10 @@ runs:
         key: ${{ runner.os }}-pip
 
     - name: Install lanzou-api
-      run: pip install lanzou-api
+      run: |
+        pip install requests
+        pip install requests_toolbelt
+        pip install git+https://github.com/Mister-Kin/LanZouCloud-API.git
       shell: bash
 
     - name: Download and upload files from lanzou cloud
