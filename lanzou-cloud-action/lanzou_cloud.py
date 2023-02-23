@@ -19,7 +19,7 @@ def after_downloaded(file_name):
 
 def handler(fid, is_file):
     if is_file:
-        lzy.set_desc(fid, '由蓝奏云脚本批量上传', is_file=True)
+        lzy.set_desc(fid, '由Github Action蓝奏云脚本批量上传', is_file=True)
 
 
 lzy = LanZouCloud()
