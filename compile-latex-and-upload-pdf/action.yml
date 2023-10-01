@@ -1,16 +1,12 @@
 name: "Compile LaTeX and upload PDF"
 author: "Mr. Kin"
-description: "Compile LaTeX and upload PDF to lanzou cloud"
+description: "Compile LaTeX and upload PDF to latex2pdf release"
 inputs:
-  lanzou_cookie_id:
-    required: true
-  lanzou_cookie_value:
-    required: true
-  lanzou_target_id:
-    required: true
   latex_project_dir:
     required: true
   cls_file_is_in_project_dir:
+    required: true
+  access_token:
     required: true
 runs:
   using: "composite"
@@ -22,30 +18,70 @@ runs:
       run: |
         project_name=${latex_project_dir##*/}
         echo "project_name=${project_name}" >> $GITHUB_OUTPUT
-        echo "upload_target_path=./${latex_project_dir}/${project_name}.pdf" >> $GITHUB_OUTPUT
       shell: bash
 
     - name: Compile LaTeX
+      id: compile-latex
       env:
         latex_project_dir: ${{ inputs.latex_project_dir }}
         project_name: ${{ steps.process-project-name.outputs.project_name }}
       run: |
-        echo ${{ steps.process-project-name.outputs.upload_target_path }}
-        if [ ${{ inputs.cls_file_is_in_project_dir }} = 'true' ]; then sed -i "s/STIX Two Math/STIXTwoMath-Regular.otf/" ./${latex_project_dir}/resources/doc.cls; else sed -i "s/STIX Two Math/STIXTwoMath-Regular.otf/" ./public_resources/doc.cls; fi
+        if [ ${{ inputs.cls_file_is_in_project_dir }} = 'true' ]; then
+            sed -i "s/STIX Two Math/STIXTwoMath-Regular.otf/" ./${latex_project_dir}/resources/doc.cls
+        else
+            sed -i "s/STIX Two Math/STIXTwoMath-Regular.otf/" ./public_resources/doc.cls
+        fi
         cd ./${latex_project_dir}
         xelatex -interaction=batchmode ${project_name}.tex
         biber ${project_name}
         xelatex -interaction=batchmode ${project_name}.tex
         xelatex -interaction=batchmode ${project_name}.tex
+        echo "build_time=$(date +"%Y-%m-%dT%H:%M:%S%:z")" >> $GITHUB_OUTPUT
+        echo "build_date=$(date +"%Y-%m-%d")" >> $GITHUB_OUTPUT
         cd ~-
       shell: bash
 
+    - name: Check up latex2pdf release exist or not
+      id: check-up-release
+      env:
+        repo_name: ${{ github.repository }}
+      run: |
+        release_url="https://api.github.com/repos/${repo_name}/releases/tags/latex2pdf"
+        response_status=$(curl -s -o /dev/null -w "%{http_code}" ${release_url})
+        if [ $response_status -eq 200 ]; then
+            echo "latex2pdf release exists, try to edit release."
+            echo "release_exist_flag=true" >> $GITHUB_OUTPUT
+        else
+            echo "latex2pdf release does not exist, try to create release."
+            echo "release_exist_flag=false" >> $GITHUB_OUTPUT
+        fi
+      continue-on-error: true
+      shell: bash
+
     - name: Upload PDF
-      uses: Mister-Kin/actions/lanzou-cloud-action@main
-      with:
-        lanzou_cookie_id: ${{ inputs.lanzou_cookie_id }}
-        lanzou_cookie_value: ${{ inputs.lanzou_cookie_value }}
-        lanzou_is_file: true
-        lanzou_is_download: false
-        lanzou_target_id: ${{ inputs.lanzou_target_id }}
-        lanzou_target_path: ${{ steps.process-project-name.outputs.upload_target_path }}
+      env:
+        latex_project_dir: ${{ inputs.latex_project_dir }}
+        project_name: ${{ steps.process-project-name.outputs.project_name }}
+        build_date: ${{ steps.compile-latex.outputs.build_date }}
+        build_time: ${{ steps.compile-latex.outputs.build_time }}
+        release_exist_flag: ${{ steps.check-up-release.outputs.release_exist_flag }}
+        repo_name: ${{ github.repository }}
+        GITHUB_TOKEN: ${{ inputs.access_token }}
+      run: |
+        upload_target_path="./${latex_project_dir}/${project_name}.pdf"
+        if [ $release_exist_flag = true ]; then
+            gh release upload "latex2pdf" "${upload_target_path}" --clobber
+            curl -s "https://api.github.com/repos/${repo_name}/releases/tags/latex2pdf" | jq -r '.body' > release_note.txt
+            if grep -q "${project_name}.pdf" release_note.txt ; then
+                sed -i "/${project_name}.pdf/s/构建于.*/构建于${build_time}/" release_note.txt
+            else
+                echo "- [${project_name}.pdf](https://github.com/${repo_name}/releases/download/latex2pdf/${project_name}.pdf)：构建于${build_time}" >> release_note.txt
+            fi
+            gh release edit "latex2pdf" -t "LaTeX2PDF ${build_date}" -F release_note.txt --latest
+        fi
+        if [ $release_exist_flag = false ]; then
+            echo "本页面分享的PDF文档由Github Action自动构建生成。" > release_note.txt
+            echo "- [${project_name}.pdf](https://github.com/${repo_name}/releases/download/latex2pdf/${project_name}.pdf)：构建于${build_time}" >> release_note.txt
+            gh release create "latex2pdf" "${upload_target_path}" -t "LaTeX2PDF ${build_date}" -F release_note.txt --latest
+        fi
+      shell: bash
