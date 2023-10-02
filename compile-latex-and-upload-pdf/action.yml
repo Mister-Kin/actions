@@ -45,9 +45,10 @@ runs:
       id: check-up-release
       env:
         repo_name: ${{ github.repository }}
+        GITHUB_TOKEN: ${{ inputs.access_token }}
       run: |
         release_url="https://api.github.com/repos/${repo_name}/releases/tags/latex2pdf"
-        response_status=$(curl -s -o /dev/null -w "%{http_code}" ${release_url})
+        response_status=$(curl -s -o /dev/null -H "Authorization: Bearer ${GITHUB_TOKEN}" -w "%{http_code}" ${release_url})
         if [ $response_status -eq 200 ]; then
             echo "latex2pdf release exists, try to edit release."
             echo "release_exist_flag=true" >> $GITHUB_OUTPUT
@@ -71,7 +72,7 @@ runs:
         upload_target_path="./${latex_project_dir}/${project_name}.pdf"
         if [ $release_exist_flag = true ]; then
             gh release upload "latex2pdf" "${upload_target_path}" --clobber
-            curl -s "https://api.github.com/repos/${repo_name}/releases/tags/latex2pdf" | jq -r '.body' > release_note.txt
+            curl -s -H "Authorization: Bearer ${GITHUB_TOKEN}" "https://api.github.com/repos/${repo_name}/releases/tags/latex2pdf" | jq -r '.body' > release_note.txt
             if grep -q "${project_name}.pdf" release_note.txt ; then
                 sed -i "/${project_name}.pdf/s/构建于.*/构建于${build_time}/" release_note.txt
             else
