@@ -5,7 +5,7 @@ runs:
   using: "composite"
   steps:
     - name: Setup TeX Live
-      uses: teatimeguest/setup-texlive-action@v2
+      uses: teatimeguest/setup-texlive-action@v3
       with:
         package-file: ${{ github.action_path }}/tex_live_packages
 
@@ -16,7 +16,7 @@ runs:
 
     - name: Cache LaTeXFonts
       id: cache-latexfonts
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ./LaTeXFonts
         key: cache-latexfonts-${{ hashFiles('./latex_fonts_version') }}
