@@ -11,7 +11,7 @@ runs:
 
     - name: Download latex fonts version file
       run: |
-        curl -s -L -O https://github.com/Mister-Kin/OpenDocs/releases/download/fonts/latex_fonts_version
+        curl -s -L -O https://github.com/Mister-Kin/OpenDocs/releases/download/latexfonts/latex_fonts_version
       shell: bash
 
     - name: Cache LaTeXFonts
@@ -29,7 +29,7 @@ runs:
     - if: ${{ steps.cache-latexfonts.outputs.cache-hit != 'true' }}
       name: Download LaTeX Fonts
       run: |
-        curl -s -L -O https://github.com/Mister-Kin/OpenDocs/releases/download/fonts/LaTeXFonts.7z
+        curl -s -L -O https://github.com/Mister-Kin/OpenDocs/releases/download/latexfonts/LaTeXFonts.7z
         7z x LaTeXFonts.7z
       shell: bash
 
