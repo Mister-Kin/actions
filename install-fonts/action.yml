@@ -1,0 +1,40 @@
+name: "Install Fonts"
+author: "Mr. Kin"
+description: "Install fonts for Ubuntu System"
+inputs:
+  font_name:
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Cache Fonts
+      id: cache-fonts
+      uses: actions/cache@v4
+      with:
+        path: ./Fonts
+        key: cache-fonts-${{ inputs.font_name }}
+
+    - if: ${{ steps.cache-fonts.outputs.cache-hit != 'true' }}
+      name: Download Fonts
+      run: |
+        mkdir ./Fonts
+        # 逐行读取输入变量
+        echo "${{ inputs.font_name }}" | while read font; do
+          # 忽略空行，字符串长度为0，即zero
+          [ -z "$font" ] && continue
+
+          echo "正在下载字体: $font ..."
+          curl -s -L -O "https://github.com/Mister-Kin/OpenDocs/releases/download/fonts/${font}.7z"
+
+          echo "正在解压: ${font}.7z ..."
+          # 解压到 ./Fonts 目录内
+          7z x "${font}.7z" -o"./Fonts" -y
+
+          rm "${font}.7z"
+        done
+      shell: bash
+
+    - name: Install and refresh Fonts
+      run: |
+        mv ./Fonts ./articles/free_fonts
+      shell: bash
