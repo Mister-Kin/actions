@@ -13,6 +13,19 @@ Required input option:
 ## setup-latex-action
 An action to setup LaTeX environment for doc class.
 
+## install-fonts
+An action to install fonts for LaTeX environment.
+
+Required input option:
+- font_name: [list]. For example:
+    ```yaml
+    font_name: |
+    AlibabaPuHuiTi3.0
+    shetumodengxiaofangti
+    FreeHKKai4700
+    pinrushouxieti
+    ```
+
 ## Author
 **Actions** © Mr. Kin, all files released under the [WTFPL][] license.
 
